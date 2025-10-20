@@ -7,8 +7,10 @@ name = "pypi"
 flask = "*"
 flask-sqlalchemy = "*"
 flask-migrate = "*"
-psycopg = {extras = ["pool", "binary"], version = "*"}
 python-dotenv = "*"
+psycopg = {extras = ["binary", "pool"], version = "*"}
+flask-bcrypt = "*"
+flask-jwt-extended = "*"
 
 [dev-packages]
 
