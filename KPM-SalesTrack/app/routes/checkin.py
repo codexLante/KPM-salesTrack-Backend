@@ -6,7 +6,6 @@ from datetime import datetime
 checkins_bp = Blueprint("checkins", __name__)
 
 @checkins_bp.route("/checkin", methods=["POST"])
-
 def checkin():
     data = request.get_json()
     user_id = data.get("user_id")
@@ -37,6 +36,7 @@ def checkin():
         "message": "Checked in successfully",
         "checkin": {
             "id": new_checkin.id,
+            "user_id": new_checkin.user_id,
             "meeting_id": new_checkin.meeting_id,
             "client_id": new_checkin.client_id,
             "checkin_time": new_checkin.checkin_time.isoformat(),
@@ -45,18 +45,17 @@ def checkin():
     }), 201
 
 @checkins_bp.route("/checkout/<int:checkin_id>", methods=["PUT"])
-
 def checkout(checkin_id):
     user_id = request.json.get("user_id")
     
     checkin = Checkin.query.filter_by(id=checkin_id, user_id=user_id).first()
     if not checkin:
-        return jsonify({"error": "Checkin not found"}), 400
+        return jsonify({"error": "Checkin not found"}), 404
     
     if checkin.checkout_time:
         return jsonify({"error": "Already checked out"}), 400
     
-    checkin.checkout_time = datetime.now()
+    checkin.checkout_time = datetime.utcnow()
     db.session.commit()
     
     return jsonify({
@@ -65,14 +64,20 @@ def checkout(checkin_id):
     }), 200
 
 @checkins_bp.route("/all", methods=["GET"])
-
 def get_checkins():
-    user_id = request.json.get("user_id")
+    user_id = request.args.get("user_id", type=int)
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+    
     checkins = Checkin.query.filter_by(user_id=user_id).all()
     
     return jsonify({
         "checkins": [{
-            "id": checkin.id,        
+            "id": checkin.id,
+            "user_id": checkin.user_id,
+            "meeting_id": checkin.meeting_id,
+            "client_id": checkin.client_id,
             "checkin_time": checkin.checkin_time.isoformat(),
             "checkout_time": checkin.checkout_time.isoformat() if checkin.checkout_time else None,
             "notes": checkin.notes

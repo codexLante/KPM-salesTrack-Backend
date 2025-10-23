@@ -20,10 +20,9 @@ def add_task():
         return jsonify({"error": "Title is required"}), 400
     if not description:
         return jsonify({"error": "Description is required"}), 400
-    if not assigned_to:
-        return jsonify({"error": "Assigned to is required"}), 400
-    if not assigned_by:
-        return jsonify({"error": "Assigned by is required"}), 400
+    if not isinstance(assigned_to, int) or not isinstance(assigned_by, int):
+        return jsonify({"error": "Assigned fields must be integers"}), 400
+
     
     parsed_due_date = None
     if due_date:

@@ -2,12 +2,11 @@ from flask import Blueprint,jsonify,request
 from app.models import User
 from app.db import db
 import re
-import os
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import create_access_token
 from datetime import timedelta
 
-bcrypt = Bcrypt()
+bcrypt=Bcrypt()
 
 users_bp = Blueprint("users", __name__)
 
@@ -35,6 +34,11 @@ def add_users():
     email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     if not re.match(email_regex, email):
         return jsonify({"error": "Invalid email address"}), 400
+    
+    phone_regex = r"^\+?\d{7,15}$"
+    if not re.match(phone_regex, phone_number):
+        return jsonify({"error": "Invalid phone number format"}), 400
+
 
     if not password:
         return jsonify({"error": "Password is required"}), 400
@@ -42,6 +46,7 @@ def add_users():
     
     if len(password) < 8:
         return jsonify({"error": "Password must be at least 8 characters long"}), 400
+
 
     
     exists = User.query.filter_by(email=email).first()
@@ -99,17 +104,16 @@ def login_users():
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
 
-   
     user = User.query.filter_by(email=email).first()
 
-    if not user:
-        return jsonify({"error": "user not found, kindly sign up"}), 401
-
-    
-    if not bcrypt.check_password_hash(user.password, password):
+    if not user or not bcrypt.check_password_hash(user.password, password):
         return jsonify({"error": "Invalid email or password"}), 401
-
     
+
+    if not user.is_active:
+        return jsonify({"error": "Account is deactivated. Please contact support."}), 403
+
+
     access_token = create_access_token(
         identity=str(user.id),
         additional_claims={"email": user.email, "role": user.role},
@@ -125,6 +129,7 @@ def login_users():
             "last_name": user.last_name,
             "email": user.email,
             "phone_number": user.phone_number,
-            "role": user.role
+            "role": user.role,
+            "is_active": user.is_active  
         }
     }), 200

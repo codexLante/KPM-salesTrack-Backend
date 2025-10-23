@@ -1,5 +1,5 @@
 from app.db import db
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class Checkin(db.Model):
@@ -10,5 +10,5 @@ class Checkin(db.Model):
     meeting_id = db.Column(db.Integer, db.ForeignKey('meetings.id'), nullable=False) 
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)  
     notes = db.Column(db.Text)
-    checkin_time = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    checkin_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     checkout_time = db.Column(db.DateTime)
