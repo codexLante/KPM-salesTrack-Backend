@@ -69,9 +69,10 @@ def create_client():
         },
     }), 201
 
-@clients_bp.route("/get_client/", methods=["GET"])
+@clients_bp.route("/<int:client_id>/get", methods=["GET"])
 def get_client(client_id):
     client = Client.query.get(client_id)
+    client_id = data.get("client_id")
 
     if not client:
         return jsonify({"error": "Client not found"}), 404
