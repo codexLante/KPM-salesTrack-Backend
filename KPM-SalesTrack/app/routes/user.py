@@ -1,4 +1,4 @@
-from flask import Blueprint,jsonify,request,send_from_directory
+from flask import Blueprint,jsonify,request
 from app.models import User
 from app.db import db
 import re
@@ -18,35 +18,58 @@ def add_users():
     last_name = data.get("last_name")
     email = data.get("email")
     password = data.get("password")
+    phone_number = data.get("phone_number") 
+    role = data.get("role", "user")  
 
+    
     if not first_name:
         return jsonify({"error": "First name is required"}), 400
     if not last_name:
         return jsonify({"error": "Last name is required"}), 400
     if not email:
         return jsonify({"error": "Email is required"}), 400
+    if not phone_number:
+        return jsonify({"error": "Phone number is required"}), 400
 
-
+    
     email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     if not re.match(email_regex, email):
         return jsonify({"error": "Invalid email address"}), 400
 
     if not password:
         return jsonify({"error": "Password is required"}), 400
+    
+    
+    if len(password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters long"}), 400
 
+    
     exists = User.query.filter_by(email=email).first()
     if exists:
         return jsonify({"error": "User with this email already exists"}), 400
 
+    
     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
 
-    new_users = User(first_name=first_name, last_name=last_name, email=email, password=hashed_password)
-    db.session.add(new_users)
+    
+    new_user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        password=hashed_password,
+        phone_number=phone_number,
+        role=role
+    )
+    
+    
+    db.session.add(new_user)
     db.session.commit()
+    
 
+    
     access_token = create_access_token(
-        identity=str(new_users.id),
-        additional_claims={"email": new_users.email},
+        identity=str(new_user.id),
+        additional_claims={"email": new_user.email, "role": new_user.role},
         expires_delta=timedelta(hours=1)
     )
 
@@ -54,12 +77,14 @@ def add_users():
         "message": "User created successfully",
         "token": access_token,
         "user": {
-            "id": new_users.id,
-            "first_name": new_users.first_name,
-            "last_name": new_users.last_name,
-            "email": new_users.email,
-            "is_active": new_users.is_active,
-            "created_at": new_users.created_at.isoformat() if new_users.created_at else None
+            "id": new_user.id,
+            "first_name": new_user.first_name,
+            "last_name": new_user.last_name,
+            "email": new_user.email,
+            "phone_number": new_user.phone_number,
+            "role": new_user.role,
+            "is_active": new_user.is_active,
+            "created_at": new_user.created_at.isoformat() if new_user.created_at else None
         }
     }), 201
 
@@ -74,19 +99,20 @@ def login_users():
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
 
-    users = User.query.filter_by(email=email).first()
+   
+    user = User.query.filter_by(email=email).first()
 
-    if not users:
-        return jsonify({"error": "User not found"}), 401
+    if not user:
+        return jsonify({"error": "user not found, kindly sign up"}), 401
 
-    check_password = bcrypt.check_password_hash(users.password, password)
-
-    if not check_password:
+    
+    if not bcrypt.check_password_hash(user.password, password):
         return jsonify({"error": "Invalid email or password"}), 401
 
+    
     access_token = create_access_token(
-        identity=str(users.id),
-        additional_claims={"email": users.email},
+        identity=str(user.id),
+        additional_claims={"email": user.email, "role": user.role},
         expires_delta=timedelta(hours=1)
     )
 
@@ -94,10 +120,11 @@ def login_users():
         "message": "Login successful",
         "token": access_token,
         "user": {
-            "id": users.id,
-            "first_name": users.first_name,
-            "last_name": users.last_name,
-            "email": users.email
-
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "role": user.role
         }
     }), 200

@@ -12,4 +12,4 @@ class Task(db.Model):
     assigned_by = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(50), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # deleted_at = db.Column(db.DateTime, nullable=True, default=None)
+    

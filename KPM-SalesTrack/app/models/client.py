@@ -11,7 +11,7 @@ class Client(db.Model):
     email = db.Column(db.String(120), nullable=False)
     address = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(50), nullable=False)
-    location = db.Column(db.JSON, nullable=False)  # Location can be a string or JSON object
+    location = db.Column(db.JSON, nullable=False)  
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     

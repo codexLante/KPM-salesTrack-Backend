@@ -1,8 +1,7 @@
-from flask import Blueprint,jsonify,request,send_from_directory
+from flask import Blueprint, jsonify, request
 from app.models import Meeting
 from app.db import db
 from datetime import datetime
-
 
 meetings_bp = Blueprint("meetings", __name__)
 
@@ -20,9 +19,9 @@ def create_meeting():
     scheduled_date = data.get("scheduled_date")
 
     if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
+        return jsonify({"error": "User is required"}), 400
     if not client_id:
-        return jsonify({"error": "Client ID is required"}), 400
+        return jsonify({"error": "Client is required"}), 400
     if not title:
         return jsonify({"error": "Title is required"}), 400
     if not duration:
@@ -36,18 +35,16 @@ def create_meeting():
     if not scheduled_time:
         return jsonify({"error": "Scheduled time is required"}), 400
 
-    
+    # Validate duration is a positive integer
     if not isinstance(duration, int) or duration <= 0:
-        return jsonify({"error": "Duration must be an integer"}), 400
+        return jsonify({"error": "Duration must be a greater than zero"}), 400
 
-    if not isinstance(scheduled_time, str) or not isinstance(scheduled_date, str):
-        return jsonify({"error": "Scheduled time and date must be strings"}), 400
-
+    # validate scheduled_time and scheduled_date
     try:
-        scheduled_time = datetime.fromisoformat(scheduled_time)
-        scheduled_date = datetime.fromisoformat(scheduled_date).date()
-    except ValueError:
-        return jsonify({"error": "Invalid date or time format"}), 400
+        parsed_scheduled_time = datetime.fromisoformat(scheduled_time)
+        parsed_scheduled_date = datetime.fromisoformat(scheduled_date).date()
+    except (ValueError, AttributeError):
+        return jsonify({"error": "Invalid date or time format. Use ISO format"}), 400
 
     new_meeting = Meeting(
         user_id=user_id,
@@ -56,8 +53,8 @@ def create_meeting():
         duration=duration,
         location=location,
         meeting_type=meeting_type,
-        scheduled_time=scheduled_time,
-        scheduled_date=scheduled_date
+        scheduled_time=parsed_scheduled_time,
+        scheduled_date=parsed_scheduled_date
     )
 
     db.session.add(new_meeting)
@@ -75,16 +72,15 @@ def create_meeting():
             "meeting_type": new_meeting.meeting_type,
             "scheduled_time": new_meeting.scheduled_time.isoformat(),
             "scheduled_date": new_meeting.scheduled_date.isoformat(),
-            "created_at": new_meeting.created_at.isoformat() if new_meeting.created_at else None
         }
     }), 201
 
-@meetings_bp.route("/get_meeting", methods=["GET"])
+@meetings_bp.route("/<int:meeting_id>/get_meeting", methods=["GET"])
 def get_meeting(meeting_id):
     meeting = Meeting.query.get(meeting_id)
 
     if not meeting:
-        return jsonify({"error": "Meeting not found"}), 404
+        return jsonify({"error": "Meeting not found"}), 400
 
     return jsonify({
         "id": meeting.id,
@@ -96,10 +92,9 @@ def get_meeting(meeting_id):
         "meeting_type": meeting.meeting_type,
         "scheduled_time": meeting.scheduled_time.isoformat(),
         "scheduled_date": meeting.scheduled_date.isoformat(),
-        "created_at": meeting.created_at.isoformat() if meeting.created_at else None
     }), 200
 
-@meetings_bp.route("/Update", methods=["PUT"])
+@meetings_bp.route("/<int:meeting_id>/Update", methods=["PUT"])
 def update_meeting(meeting_id):
     data = request.get_json()
     meeting = Meeting.query.get(meeting_id)
@@ -107,23 +102,25 @@ def update_meeting(meeting_id):
     if not meeting:
         return jsonify({"error": "Meeting not found"}), 404
 
-    user_id = data.get("user_id", meeting.user_id)
-    client_id = data.get("client_id", meeting.client_id)
-    title = data.get("title", meeting.title)
-    duration = data.get("duration", meeting.duration)
-    location = data.get("location", meeting.location)
-    meeting_type = data.get("meeting_type", meeting.meeting_type)
-    scheduled_time = data.get("scheduled_time", meeting.scheduled_time.isoformat())
-    scheduled_date = data.get("scheduled_date", meeting.scheduled_date.isoformat())
+    user_id = data.get("user_id")
+    client_id = data.get("client_id")
+    title = data.get("title")
+    duration = data.get("duration")
+    location = data.get("location")
+    meeting_type = data.get("meeting_type")
+    scheduled_time = data.get("scheduled_time")
+    scheduled_date = data.get("scheduled_date")
 
     if not isinstance(duration, int) or duration <= 0:
-        return jsonify({"error": "Duration must be a positive integer"}), 400
+        return jsonify({"error": "Duration must be a greater than zero"}), 400
 
+    # validate dates
     try:
-        scheduled_time = datetime.fromisoformat(scheduled_time)
-        scheduled_date = datetime.fromisoformat(scheduled_date).date()
-    except ValueError:
+        parsed_scheduled_time = datetime.fromisoformat(scheduled_time)
+        parsed_scheduled_date = datetime.fromisoformat(scheduled_date).date()
+    except (ValueError, AttributeError):
         return jsonify({"error": "Invalid date or time format"}), 400
+
 
     meeting.user_id = user_id
     meeting.client_id = client_id
@@ -131,9 +128,9 @@ def update_meeting(meeting_id):
     meeting.duration = duration
     meeting.location = location
     meeting.meeting_type = meeting_type
-    meeting.scheduled_time = scheduled_time
-    meeting.scheduled_date = scheduled_date
-
+    meeting.scheduled_time = parsed_scheduled_time
+    meeting.scheduled_date = parsed_scheduled_date
+    
     db.session.commit()
 
     return jsonify({
@@ -148,16 +145,15 @@ def update_meeting(meeting_id):
             "meeting_type": meeting.meeting_type,
             "scheduled_time": meeting.scheduled_time.isoformat(),
             "scheduled_date": meeting.scheduled_date.isoformat(),
-            "created_at": meeting.created_at.isoformat() if meeting.created_at else None
         }
-    }), 201
+    }), 200
 
-@meetings_bp.route("/delete", methods=["DELETE"])
+@meetings_bp.route("/<int:meeting_id>/delete", methods=["DELETE"])
 def delete_meeting(meeting_id):
     meeting = Meeting.query.get(meeting_id)
 
     if not meeting:
-        return jsonify({"error": "Meeting not found"}), 404
+        return jsonify({"error": "Meeting not found"}),400
 
     db.session.delete(meeting)
     db.session.commit()

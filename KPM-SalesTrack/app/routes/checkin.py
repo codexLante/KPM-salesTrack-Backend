@@ -14,10 +14,14 @@ def checkin():
     client_id = data.get("client_id")
     notes = data.get("notes")
 
-
-    
-   
-   
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+    if not meeting_id:
+        return jsonify({"error": "Meeting ID is required"}), 400
+    if not client_id:
+        return jsonify({"error": "Client ID is required"}), 400
+    if not notes:
+        return jsonify({"error": "Notes are required"}), 400
 
     new_checkin = Checkin(
         user_id=user_id,
