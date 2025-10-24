@@ -1,8 +1,8 @@
-"""Updated Models and Routes
+"""Updated Tables
 
-Revision ID: 21a4c29934f5
+Revision ID: 1c6c148379c1
 Revises: 
-Create Date: 2025-10-23 16:05:16.098462
+Create Date: 2025-10-23 19:48:12.565118
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '21a4c29934f5'
+revision = '1c6c148379c1'
 down_revision = None
 branch_labels = None
 depends_on = None
