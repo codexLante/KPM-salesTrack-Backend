@@ -140,3 +140,33 @@ def updated_objective(objective_id):
             "created_at": objective.created_at.isoformat()
         }
     }), 200
+
+@objectives_bp.route('/<int:objective_id>/get', methods=['GET'])
+def get_objective(objective_id):
+    objective = Objective.query.get(objective_id)
+    if not objective:
+        return jsonify({"error": "Objective not found"}), 400
+
+    return jsonify({
+        "id": objective.id,
+        "title": objective.title,
+        "description": objective.description,
+        "target_value": objective.target_value,
+        "current_value": objective.current_value,
+        "start_date": objective.start_date.isoformat(),
+        "end_date": objective.end_date.isoformat(),
+        "user_id": objective.user_id,
+        "created_by": objective.created_by,
+        "created_at": objective.created_at.isoformat()
+    }), 200
+
+@objectives_bp.route('/<int:objective_id>/delete', methods=['DELETE'])
+def delete_objective(objective_id):
+    objective = Objective.query.get(objective_id)
+    if not objective:
+        return jsonify({"error": "Objective not found"}), 400
+
+    db.session.delete(objective)
+    db.session.commit()
+
+    return jsonify({"message": "Objective deleted successfully"}), 200

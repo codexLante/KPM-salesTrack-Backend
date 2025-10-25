@@ -133,3 +133,133 @@ def login_users():
             "is_active": user.is_active  
         }
     }), 200
+
+@users_bp.route("/<int:user_id>/get_user", methods=["GET"])
+def get_user(user_id):
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "role": user.role,
+        "is_active": user.is_active,
+        "created_at": user.created_at.isoformat() if user.created_at else None
+    }), 200
+
+@users_bp.route("/GetAll", methods=["GET"])
+def get_all_users():
+    users = User.query.all()
+    users_list = []
+
+    for user in users:
+        users_list.append({
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        })
+    
+    return jsonify(users_list), 200
+
+@users_bp.route("/<int:user_id>/update", methods=["PUT"])
+def updated_user(user_id):
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    data = request.get_json()
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    email = data.get("email")
+    phone_number = data.get("phone_number")
+    role = data.get("role", user.role)  
+    is_active = data.get("is_active", user.is_active) 
+
+    
+    if first_name:
+        user.first_name = first_name
+    if last_name:
+        user.last_name = last_name
+    if email:
+        user.email = email
+    if phone_number:
+        user.phone_number = phone_number
+    if role:
+        user.role = role
+    user.is_active = is_active
+
+    
+    db.session.commit()
+
+    return jsonify({
+        "message": "User updated successfully",
+        "user": {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    }), 200
+
+@users_bp.route("/<int:user_id>/Active", methods=["PUT"])
+def active_user(user_id):
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.is_active = True
+    db.session.commit()
+
+    return jsonify({
+        "message": "User is Active",
+        "user": {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    }), 200
+
+@users_bp.route("/<int:user_id>/Inactive", methods=["PUT"])
+def inactive_user(user_id):
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.is_active = False
+    db.session.commit()
+
+    return jsonify({
+        "message": "User is Inactive",
+        "user": {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    }), 200

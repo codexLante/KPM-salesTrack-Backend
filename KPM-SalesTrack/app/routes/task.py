@@ -59,6 +59,44 @@ def add_task():
         }
     }), 201
 
+@tasks_bp.route("/GetAll", methods=["GET"])
+def get_all_tasks():
+    tasks = Task.query.all()
+    tasks_list = []
+
+    for task in tasks:
+        tasks_list.append({
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "status": task.status,
+            "assigned_to": task.assigned_to,
+            "assigned_by": task.assigned_by,
+            "due_date": task.due_date.isoformat() if task.due_date else None,
+            "created_at": task.created_at.isoformat()
+        })
+    
+    return jsonify(tasks_list), 200
+
+@tasks_bp.route("/get/<int:task_id>", methods=["GET"])
+def get_task(task_id):
+    task = Task.query.get(task_id)
+
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
+    
+    return jsonify({
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "status": task.status,
+        "assigned_to": task.assigned_to,
+        "assigned_by": task.assigned_by,
+        "due_date": task.due_date.isoformat() if task.due_date else None,
+        "created_at": task.created_at.isoformat()
+    }), 200
+
+
 @tasks_bp.route("/update/<int:task_id>", methods=["PUT"])
 def update_task(task_id):
     data = request.get_json()

@@ -94,6 +94,25 @@ def get_meeting(meeting_id):
         "scheduled_date": meeting.scheduled_date.isoformat(),
     }), 200
 
+@meetings_bp.route("/GetAll", methods=["GET"])
+def get_all_meetings():
+    meetings = Meeting.query.all()
+    meetings_list = []
+
+    for meeting in meetings:
+        meetings_list.append({
+            "id": meeting.id,
+            "user_id": meeting.user_id,
+            "client_id": meeting.client_id,
+            "title": meeting.title,
+            "duration": meeting.duration,
+            "location": meeting.location,
+            "meeting_type": meeting.meeting_type,
+            "scheduled_time": meeting.scheduled_time.isoformat(),
+            "scheduled_date": meeting.scheduled_date.isoformat(),
+        })
+    return jsonify(meetings_list), 200
+
 @meetings_bp.route("/<int:meeting_id>/Update", methods=["PUT"])
 def update_meeting(meeting_id):
     data = request.get_json()

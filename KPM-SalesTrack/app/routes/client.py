@@ -146,7 +146,27 @@ def edit_client(client_id):
             "created_at": client.created_at.isoformat(),
             "assigned_to": client.assigned_to
         }
-    }), 200  # Changed from 201 to 200
+    }), 200
+    
+@clients_bp.route("/GetAll", methods=["GET"])
+def get_all_clients():
+    clients = Client.query.all()
+    clients_list = []
+
+    for client in clients:
+        clients_list.append({
+            "id": client.id,
+            "company_name": client.company_name,
+            "contact_person": client.contact_person,
+            "phone_number": client.phone_number,
+            "email": client.email,
+            "address": client.address,
+            "status": client.status,
+            "location": client.location,
+            "created_at": client.created_at.isoformat(),
+            "assigned_to": client.assigned_to
+        })
+    return jsonify(clients_list), 200
 
 @clients_bp.route("/<int:client_id>/hard_delete", methods=["DELETE"])
 def delete_client(client_id):
