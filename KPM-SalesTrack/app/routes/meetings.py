@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app.models import Meeting
 from app.db import db
 from datetime import datetime
+from app.utils import geocode_address
 
 meetings_bp = Blueprint("meetings", __name__)
 
@@ -13,11 +14,12 @@ def create_meeting():
     client_id = data.get("client_id")
     title = data.get("title")
     duration = data.get("duration")
-    location = data.get("location")
+    address = data.get("location")  
     meeting_type = data.get("meeting_type")
     scheduled_time = data.get("scheduled_time")
     scheduled_date = data.get("scheduled_date")
 
+    # Validate required fields
     if not user_id:
         return jsonify({"error": "User is required"}), 400
     if not client_id:
@@ -26,8 +28,8 @@ def create_meeting():
         return jsonify({"error": "Title is required"}), 400
     if not duration:
         return jsonify({"error": "Duration is required"}), 400
-    if not location:
-        return jsonify({"error": "Location is required"}), 400
+    if not address:
+        return jsonify({"error": "Address is required"}), 400
     if not meeting_type:
         return jsonify({"error": "Meeting type is required"}), 400
     if not scheduled_date:
@@ -35,16 +37,18 @@ def create_meeting():
     if not scheduled_time:
         return jsonify({"error": "Scheduled time is required"}), 400
 
-    # Validate duration is a positive integer
     if not isinstance(duration, int) or duration <= 0:
-        return jsonify({"error": "Duration must be a greater than zero"}), 400
+        return jsonify({"error": "Duration must be greater than zero"}), 400
 
-    # validate scheduled_time and scheduled_date
     try:
         parsed_scheduled_time = datetime.fromisoformat(scheduled_time)
         parsed_scheduled_date = datetime.fromisoformat(scheduled_date).date()
     except (ValueError, AttributeError):
         return jsonify({"error": "Invalid date or time format. Use ISO format"}), 400
+
+    location = geocode_address(address)
+    if not location:
+        return jsonify({"error": "Could not geocode the provided address"}), 400
 
     new_meeting = Meeting(
         user_id=user_id,
@@ -125,31 +129,38 @@ def update_meeting(meeting_id):
     client_id = data.get("client_id")
     title = data.get("title")
     duration = data.get("duration")
-    location = data.get("location")
+    address = data.get("location") 
     meeting_type = data.get("meeting_type")
     scheduled_time = data.get("scheduled_time")
     scheduled_date = data.get("scheduled_date")
 
-    if not isinstance(duration, int) or duration <= 0:
-        return jsonify({"error": "Duration must be a greater than zero"}), 400
 
-    # validate dates
+    if not all([user_id, client_id, title, duration, address, meeting_type, scheduled_time, scheduled_date]):
+        return jsonify({"error": "All fields are required"}), 400
+
+    if not isinstance(duration, int) or duration <= 0:
+        return jsonify({"error": "Duration must be greater than zero"}), 400
+
     try:
         parsed_scheduled_time = datetime.fromisoformat(scheduled_time)
         parsed_scheduled_date = datetime.fromisoformat(scheduled_date).date()
-    except (ValueError, AttributeError):
+    except (ValueError, TypeError):
         return jsonify({"error": "Invalid date or time format"}), 400
 
+    if address != meeting.location.get("label"):
+        geocoded = geocode_address(address)
+        if not geocoded:
+            return jsonify({"error": "Could not geocode the updated location"}), 400
+        meeting.location = geocoded
 
     meeting.user_id = user_id
     meeting.client_id = client_id
     meeting.title = title
     meeting.duration = duration
-    meeting.location = location
     meeting.meeting_type = meeting_type
     meeting.scheduled_time = parsed_scheduled_time
     meeting.scheduled_date = parsed_scheduled_date
-    
+
     db.session.commit()
 
     return jsonify({
