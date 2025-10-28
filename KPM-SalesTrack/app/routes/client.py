@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, request, send_from_directory
+from flask import Blueprint, jsonify, request
 from app.models import Client
 from app.db import db
 from datetime import datetime
+from app.utils import geocode_address
 
 clients_bp = Blueprint("clients", __name__)
 
@@ -15,8 +16,8 @@ def create_client():
     email = data.get("email")
     address = data.get("address")
     status = data.get("status")
-    location = data.get("location")
     assigned_to = data.get("assigned_to")
+
 
     if not company_name:
         return jsonify({"error": "Company name is required"}), 400
@@ -30,10 +31,13 @@ def create_client():
         return jsonify({"error": "Address is required"}), 400
     if not status:
         return jsonify({"error": "Status is required"}), 400
-    if not location:
-        return jsonify({"error": "Location is required"}), 400
     if not assigned_to:
         return jsonify({"error": "Assigned to is required"}), 400
+
+
+    location = geocode_address(address)
+    if not location:
+        return jsonify({"error": "Could not geocode the provided address"}), 400
 
     new_client = Client(
         company_name=company_name,
@@ -99,9 +103,7 @@ def edit_client(client_id):
     email = data.get("email")
     address = data.get("address")
     status = data.get("status")
-    location = data.get("location")
     assigned_to = data.get("assigned_to")
-
 
     if not company_name:
         return jsonify({"error": "Company name is required"}), 400
@@ -115,19 +117,22 @@ def edit_client(client_id):
         return jsonify({"error": "Address is required"}), 400
     if not status:
         return jsonify({"error": "Status is required"}), 400
-    if not location:
-        return jsonify({"error": "Location is required"}), 400
     if not assigned_to:
         return jsonify({"error": "Assigned to is required"}), 400
 
-    # Update the existing client object
+    if address != client.address:
+        location = geocode_address(address)
+        if not location:
+            return jsonify({"error": "Could not geocode the updated address"}), 400
+        client.location = location
+
+
     client.company_name = company_name
     client.contact_person = contact_person
     client.phone_number = phone_number
     client.email = email
     client.address = address
     client.status = status
-    client.location = location
     client.assigned_to = assigned_to
 
     db.session.commit()
