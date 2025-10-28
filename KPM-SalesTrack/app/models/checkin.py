@@ -9,6 +9,6 @@ class Checkin(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     meeting_id = db.Column(db.Integer, db.ForeignKey('meetings.id'), nullable=False) 
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)  
-    notes = db.Column(db.Text)
+    location = db.Column(db.JSON, nullable=True)
     checkin_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     checkout_time = db.Column(db.DateTime)

@@ -1,7 +1,9 @@
 from flask import Blueprint, jsonify, request
-from app.models import Checkin
+from app.models import Checkin, Meeting
 from app.db import db
 from datetime import datetime
+from geopy.distance import geodesic
+from app.utils import reverse_geocode 
 
 checkins_bp = Blueprint("checkins", __name__)
 
@@ -11,24 +13,35 @@ def checkin():
     user_id = data.get("user_id")
     meeting_id = data.get("meeting_id")
     client_id = data.get("client_id")
-    notes = data.get("notes")
+    user_location = data.get("location") 
 
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    if not meeting_id:
-        return jsonify({"error": "Meeting ID is required"}), 400
-    if not client_id:
-        return jsonify({"error": "Client ID is required"}), 400
-    if not notes:
-        return jsonify({"error": "Notes are required"}), 400
+    if not all([user_id, meeting_id, client_id, user_location]):
+        return jsonify({"error": "All fields including location are required"}), 400
+
+    meeting = Meeting.query.get(meeting_id)
+    if not meeting or not meeting.location:
+        return jsonify({"error": "Meeting location not found"}), 404
+
+    meeting_coords = (meeting.location["coordinates"][1], meeting.location["coordinates"][0])  
+    user_coords = (user_location["lat"], user_location["lon"])
+
+
+    distance = geodesic(user_coords, meeting_coords).meters
+    if distance > 50:
+        return jsonify({"message": f"Too far from meeting location ({int(distance)}m). Must be within 50m."}), 400
+
+
+    geocoded_location = reverse_geocode(user_location["lat"], user_location["lon"])
+    if not geocoded_location:
+        return jsonify({"error": "Could not reverse geocode your location"}), 400
 
     new_checkin = Checkin(
         user_id=user_id,
         meeting_id=meeting_id,
         client_id=client_id,
-        notes=notes
+        location=geocoded_location
     )
-    
+
     db.session.add(new_checkin)
     db.session.commit()
 
@@ -40,46 +53,6 @@ def checkin():
             "meeting_id": new_checkin.meeting_id,
             "client_id": new_checkin.client_id,
             "checkin_time": new_checkin.checkin_time.isoformat(),
-            "notes": new_checkin.notes
+            "location": new_checkin.location
         }
     }), 201
-
-@checkins_bp.route("/checkout/<int:checkin_id>", methods=["PUT"])
-def checkout(checkin_id):
-    user_id = request.json.get("user_id")
-    
-    checkin = Checkin.query.filter_by(id=checkin_id, user_id=user_id).first()
-    if not checkin:
-        return jsonify({"error": "Checkin not found"}), 404
-    
-    if checkin.checkout_time:
-        return jsonify({"error": "Already checked out"}), 400
-    
-    checkin.checkout_time = datetime.utcnow()
-    db.session.commit()
-    
-    return jsonify({
-        "message": "Checked out successfully",
-        "checkout_time": checkin.checkout_time.isoformat()
-    }), 200
-
-@checkins_bp.route("/all", methods=["GET"])
-def get_checkins():
-    user_id = request.args.get("user_id", type=int)
-    
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    
-    checkins = Checkin.query.filter_by(user_id=user_id).all()
-    
-    return jsonify({
-        "checkins": [{
-            "id": checkin.id,
-            "user_id": checkin.user_id,
-            "meeting_id": checkin.meeting_id,
-            "client_id": checkin.client_id,
-            "checkin_time": checkin.checkin_time.isoformat(),
-            "checkout_time": checkin.checkout_time.isoformat() if checkin.checkout_time else None,
-            "notes": checkin.notes
-        } for checkin in checkins]
-    }), 200
