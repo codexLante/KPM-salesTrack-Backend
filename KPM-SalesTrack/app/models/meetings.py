@@ -13,4 +13,4 @@ class Meeting(db.Model):
     location = db.Column(db.JSON, nullable=False)  
     meeting_type = db.Column(db.String(50), nullable=False)  
     scheduled_time = db.Column(db.DateTime, nullable=False) 
-    scheduled_date = db.Column(db.Date, nullable=False) 
+    scheduled_date = db.Column(db.Date, nullable=False)
