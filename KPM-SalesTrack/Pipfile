@@ -11,6 +11,8 @@ python-dotenv = "*"
 psycopg = {extras = ["binary", "pool"], version = "*"}
 flask-bcrypt = "*"
 flask-jwt-extended = "*"
+requests = "*"
+geopy = "*"
 
 [dev-packages]
 
