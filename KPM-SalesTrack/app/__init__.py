@@ -1,9 +1,8 @@
 from flask import Flask
 from .config import Config
 from .db import db,migrate
-from app.routes import users_bp, meetings_bp, clients_bp
+from app.routes import users_bp, meetings_bp, clients_bp, routes_bp, tasks_bp,checkins_bp,objectives_bp
 from flask_jwt_extended import JWTManager
-from app.routes import users_bp,tasks_bp,checkins_bp,objectives_bp
 from flask_bcrypt import Bcrypt
 
 bcrypt=Bcrypt()
@@ -26,5 +25,6 @@ def create_app():
     app.register_blueprint(checkins_bp, url_prefix="/checkins")
     app.register_blueprint(clients_bp, url_prefix="/clients")
     app.register_blueprint(objectives_bp, url_prefix="/objectives")
+    app.register_blueprint(routes_bp, url_prefix="/routes")
 
     return app
