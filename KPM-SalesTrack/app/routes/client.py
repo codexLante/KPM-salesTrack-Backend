@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from app.models import Client
+from app.models import Client,Meeting
 from app.db import db
 from datetime import datetime
 from app.utils import geocode_address, admin_required, salesman_required, owner_or_admin_required
@@ -81,15 +81,34 @@ def create_client():
 @owner_or_admin_required
 def get_client(client_id):
     client = Client.query.get(client_id)
-
     if not client:
         return jsonify({"error": "Client not found"}), 404
 
     current_user_id = int(get_jwt_identity())
     role = get_jwt().get("role")
-    
     if role != "admin" and client.assigned_to != current_user_id:
-        return jsonify({"error": "Access denied. You can only view your own clients."}), 400
+        return jsonify({"error": "Access denied"}), 400
+
+    today = datetime.utcnow().date()
+    meetings = Meeting.query.filter_by(client_id=client.id).order_by(Meeting.scheduled_date.desc()).all()
+
+    upcoming = []
+    past = []
+
+    for m in meetings:
+        meeting_data = {
+            "id": m.id,
+            "type": m.meeting_type,
+            "title": m.title,
+            "scheduled_date": m.scheduled_date.isoformat(),
+            "scheduled_time": m.scheduled_time.strftime("%H:%M"),
+            "duration": m.duration,
+            "location": m.location,
+        }
+        if m.scheduled_date >= today:
+            upcoming.append(meeting_data)
+        else:
+            past.append(meeting_data)
 
     return jsonify({
         "id": client.id,
@@ -101,9 +120,10 @@ def get_client(client_id):
         "status": client.status,
         "location": client.location,
         "created_at": client.created_at.isoformat(),
-        "assigned_to": client.assigned_to
+        "assigned_to": client.assigned_to,
+        "upcomingMeetings": upcoming,
+        "pastMeetings": past
     }), 200
-
 
 @clients_bp.route("/<int:client_id>/edit", methods=["PUT"])
 @owner_or_admin_required

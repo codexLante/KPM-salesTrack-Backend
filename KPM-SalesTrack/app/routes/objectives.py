@@ -12,32 +12,34 @@ objectives_bp = Blueprint('objectives', __name__)
 @salesman_required
 def create_objective():
     data = request.get_json()
-
+    try:
+        current_user_id = int(get_jwt_identity())
+    except Exception:
+        return jsonify({"error": "Authentication error."}), 401
+    
     title = data.get('title')
     description = data.get('description')
     target_value = data.get('target_value')
     start_date = data.get('start_date')
     end_date = data.get('end_date')
-    user_id = data.get('user_id')
-    created_by = data.get('created_by')
-
-    current_user_id = int(get_jwt_identity())
-    if created_by != current_user_id:
-        return jsonify({"error": "You can only create objectives as yourself"}), 403
+    user_id = data.get('user_id') 
 
     if not title:
         return jsonify({"error": "Title is required"}), 400
-    if not target_value or not isinstance(target_value, int):
+    
+    if target_value is None:
+        return jsonify({"error": "Target value is required"}), 400
+    try:
+        target_value = int(target_value)
+    except (ValueError, TypeError):
         return jsonify({"error": "Target value must be a valid integer"}), 400
+        
     if not start_date or not isinstance(start_date, str):
         return jsonify({"error": "Start date must be a valid ISO format string"}), 400
     if not end_date or not isinstance(end_date, str):
         return jsonify({"error": "End date must be a valid ISO format string"}), 400
     if not user_id or not isinstance(user_id, int):
         return jsonify({"error": "User ID must be a valid integer"}), 400
-    if not created_by or not isinstance(created_by, int):
-        return jsonify({"error": "Created by must be a valid integer"}), 400
-
     try:
         parsed_start_date = datetime.fromisoformat(start_date)
         parsed_end_date = datetime.fromisoformat(end_date)
@@ -51,7 +53,7 @@ def create_objective():
         start_date=parsed_start_date,
         end_date=parsed_end_date,
         user_id=user_id,
-        created_by=created_by
+        created_by=current_user_id 
     )
 
     db.session.add(new_objective)
@@ -64,7 +66,7 @@ def create_objective():
             "title": new_objective.title,
             "description": new_objective.description,
             "target_value": new_objective.target_value,
-            "current_value": new_objective.current_value,
+            "current_value": getattr(new_objective, 'current_value', 0),
             "start_date": new_objective.start_date.isoformat(),
             "end_date": new_objective.end_date.isoformat(),
             "user_id": new_objective.user_id,

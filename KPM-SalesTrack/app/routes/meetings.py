@@ -4,16 +4,16 @@ from app.db import db
 from datetime import datetime
 from app.utils import geocode_address
 from flask_jwt_extended import get_jwt_identity, get_jwt
-from app.utils import admin_required, sales_or_admin_required
+from app.utils import admin_required, sales_or_admin_required,owner_or_admin_required
 
 meetings_bp = Blueprint("meetings", __name__)
-
 @meetings_bp.route("/admin/all", methods=["GET"])
 @admin_required
 def admin_get_all_meetings():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     status_filter = request.args.get('status', 'all')
+    user_id = request.args.get('user_id', type=int)
     
     if page < 1 or per_page < 1 or per_page > 100:
         return jsonify({"error": "Invalid pagination parameters"}), 400
@@ -21,10 +21,14 @@ def admin_get_all_meetings():
     try:
         query = Meeting.query
         
-        if status_filter == 'upcoming':
-            query = query.filter(Meeting.scheduled_date >= datetime.now().date())
-        elif status_filter == 'completed':
-            query = query.filter(Meeting.scheduled_date < datetime.now().date())
+        if status_filter and status_filter.lower() != 'all':
+            if status_filter.lower() == 'upcoming':
+                query = query.filter(Meeting.scheduled_date >= datetime.now().date())
+            elif status_filter.lower() == 'completed':
+                query = query.filter(Meeting.scheduled_date < datetime.now().date())
+        
+        if user_id:
+            query = query.filter(Meeting.user_id == user_id)
         
         pagination = query.order_by(Meeting.scheduled_date.desc()).paginate(
             page=page, per_page=per_page, error_out=False
@@ -45,6 +49,7 @@ def admin_get_all_meetings():
                 "location": m.location.get("label") if m.location else m.location,
                 "status": "Completed" if m.scheduled_date < datetime.now().date() else "Upcoming",
                 "salesPerson": f"{user.first_name} {user.last_name}" if user else "Unknown",
+                "salesPersonId": user.id if user else None,
                 "duration": m.duration,
                 "notes": m.title
             })
@@ -59,6 +64,7 @@ def admin_get_all_meetings():
             }
         }), 200
     except Exception as e:
+        print(f"Error fetching meetings: {str(e)}")
         return jsonify({"error": f"Error fetching meetings: {str(e)}"}), 500
 
 
@@ -416,6 +422,47 @@ def sales_update_meeting(meeting_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Database error: {str(e)}"}), 500
+        
+@meetings_bp.route("client/<int:client_id>/", methods=["GET"])
+@owner_or_admin_required
+def get_meetings_for_client(client_id):
+    try:
+        client = Client.query.get(client_id)
+        if not client:
+            return jsonify({"error": "Client not found"}), 404
+
+        today = datetime.utcnow().date()
+        meetings = Meeting.query.filter_by(client_id=client_id).order_by(Meeting.scheduled_date.desc()).all()
+
+        upcoming = []
+        past = []
+
+        for m in meetings:
+            meeting_data = {
+                "id": m.id,
+                "title": m.title,
+                "meetingType": m.meeting_type,
+                "scheduled_date": m.scheduled_date.isoformat(),
+                "scheduled_time": m.scheduled_time.strftime('%H:%M'),
+                "duration": m.duration,
+                "location": m.location.get("label") if m.location else m.location,
+                "status": "Completed" if m.scheduled_date < today else "Upcoming"
+            }
+            if m.scheduled_date >= today:
+                upcoming.append(meeting_data)
+            else:
+                past.append(meeting_data)
+
+        return jsonify({
+            "client_id": client_id,
+            "upcomingMeetings": upcoming,
+            "pastMeetings": past
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error fetching client meetings: {str(e)}"}), 500
+
+
 
 
 @meetings_bp.route("/sales/<int:meeting_id>/delete", methods=["DELETE"])
