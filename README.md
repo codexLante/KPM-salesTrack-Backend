@@ -15,19 +15,19 @@ A robust backend service for KPM Sales Tracking system that helps businesses mon
 
 ## Technologies Used
 
-- Node.js ⬢ (JavaScript) 🟨
-- PostgreSQL 🐘
-- Express.js 🚂
-- JWT Authentication 🔐
-- npm 📦 / yarn 🧶
+- Node.js (JavaScript) 
+- PostgreSQL 
+- Express.js 
+- JWT Authentication 
+- npm  / yarn 
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14 or higher) ⬢
-- PostgreSQL 🐘
-- npm 📦 or yarn 🧶
+- Node.js (v14 or higher) 
+- PostgreSQL 
+- npm  or yarn 
 
 ### Installation
 
@@ -39,9 +39,9 @@ cd KPM-salesTrack-Backend
 
 2. Install dependencies:
 ```bash
-npm install     # Using npm 📦
+npm install     # Using npm 
 # or
-yarn install    # Using yarn 🧶
+yarn install    # Using yarn 
 ```
 
 3. Configure environment variables:
@@ -81,10 +81,3 @@ This project is licensed under Moringa School For Educational Purposes.
 4. Push to the branch
 5. Create a Pull Request
 
-## Maintainers
-
-- CodexLante ([@codexLante](https://github.com/codexLante))
-
-## Support
-
-For support, email support@kpm.com or raise an issue in the repository.
