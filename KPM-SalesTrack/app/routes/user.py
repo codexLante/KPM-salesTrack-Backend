@@ -5,10 +5,12 @@ import re
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import create_access_token
 from datetime import timedelta
+from app.utils import admin_required, owner_or_admin_required
 
 bcrypt=Bcrypt()
 
 users_bp = Blueprint("users", __name__)
+
 
 @users_bp.route("/add", methods=["POST"])
 def add_users():
@@ -135,6 +137,7 @@ def login_users():
     }), 200
 
 @users_bp.route("/<int:user_id>/get_user", methods=["GET"])
+@owner_or_admin_required  
 def get_user(user_id):
     user = User.query.get(user_id)
 
@@ -153,10 +156,11 @@ def get_user(user_id):
     }), 200
 
 @users_bp.route("/GetAll", methods=["GET"])
+@admin_required  
 def get_all_users():
     users = User.query.all()
     users_list = []
-
+    users = User.query.filter(User.role != 'admin').all()
     for user in users:
         users_list.append({
             "id": user.id,
@@ -172,11 +176,12 @@ def get_all_users():
     return jsonify(users_list), 200
 
 @users_bp.route("/<int:user_id>/update", methods=["PUT"])
+@owner_or_admin_required 
 def updated_user(user_id):
     user = User.query.get(user_id)
 
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "User not found"}), 400
     
     data = request.get_json()
     first_name = data.get("first_name")
@@ -217,11 +222,12 @@ def updated_user(user_id):
     }), 200
 
 @users_bp.route("/<int:user_id>/Active", methods=["PUT"])
+@admin_required 
 def active_user(user_id):
     user = User.query.get(user_id)
 
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "User not found"}), 400
 
     user.is_active = True
     db.session.commit()
@@ -241,11 +247,12 @@ def active_user(user_id):
     }), 200
 
 @users_bp.route("/<int:user_id>/Inactive", methods=["PUT"])
+@admin_required
 def inactive_user(user_id):
     user = User.query.get(user_id)
 
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "User not found"}), 400
 
     user.is_active = False
     db.session.commit()
