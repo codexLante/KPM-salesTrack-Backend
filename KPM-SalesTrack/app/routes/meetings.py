@@ -354,34 +354,52 @@ def sales_get_meeting(meeting_id):
         "pastMeetings": []
     }), 200
 
-@meetings_bp.route("/sales/<int:meeting_id>/Today", methods=["GET"])
+@meetings_bp.route("/sales/today", methods=["GET"])
 @sales_or_admin_required
-def sales_get_meeting_per_day(meeting_id):
+def sales_get_todays_meetings():
     current_user_id = int(get_jwt_identity())
     user_role = get_jwt().get('role')
-
-    meeting = Meeting.query.get(meeting_id)
-    if not meeting:
-        return jsonify({"error": "Meeting not found"}), 404
-
-    if user_role != 'admin' and meeting.user_id != current_user_id:
-        return jsonify({"error": "Access denied"}), 403
-
-    client = Client.query.get(meeting.client_id)
-
-    return jsonify({
-        "id": meeting.id,
-        "client": client.company_name if client else "Unknown",
-        "contactPerson": client.contact_person if client else "N/A",
-        "meetingType": meeting.meeting_type,
-        "date": meeting.scheduled_date.isoformat(),
-        "time": meeting.scheduled_time.strftime('%H:%M'),
-        "location": meeting.location.get("label") if meeting.location else meeting.location,
-        "status": "Completed" if meeting.scheduled_date < datetime.now().date() else "Upcoming",
-        "duration": meeting.duration,
-        "notes": meeting.title,
-        "pastMeetings": []
-    }), 200
+    
+    today = datetime.now().date()
+    
+    try:
+        if user_role == 'admin':
+            meetings = Meeting.query.filter(
+                Meeting.scheduled_date == today
+            ).order_by(Meeting.scheduled_time.asc()).all()
+        else:
+            meetings = Meeting.query.filter(
+                Meeting.scheduled_date == today,
+                Meeting.user_id == current_user_id
+            ).order_by(Meeting.scheduled_time.asc()).all()
+        
+        meetings_list = []
+        for m in meetings:
+            client = Client.query.get(m.client_id)
+            user = User.query.get(m.user_id)
+            
+            meetings_list.append({
+                "id": m.id,
+                "client": client.company_name if client else "Unknown",
+                "clientId": client.id if client else None,
+                "contactPerson": client.contact_person if client else "N/A",
+                "meetingType": m.meeting_type,
+                "date": m.scheduled_date.isoformat(),
+                "time": m.scheduled_time.strftime('%H:%M'),
+                "location": m.location.get("label") if m.location else m.location,
+                "status": "Completed" if m.scheduled_date < datetime.now().date() else "Upcoming",
+                "duration": m.duration,
+                "notes": m.title,
+                "salesPerson": f"{user.first_name} {user.last_name}" if user else "Unknown"
+            })
+        
+        return jsonify({
+            "meetings": meetings_list,
+            "count": len(meetings_list)
+        }), 200
+    
+    except Exception as e:
+        return jsonify({"error": f"Error fetching today's meetings: {str(e)}"}), 500
 
 
 @meetings_bp.route("/sales/<int:meeting_id>/update", methods=["PUT"])
