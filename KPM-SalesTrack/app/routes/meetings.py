@@ -354,6 +354,35 @@ def sales_get_meeting(meeting_id):
         "pastMeetings": []
     }), 200
 
+@meetings_bp.route("/sales/<int:meeting_id>/Today", methods=["GET"])
+@sales_or_admin_required
+def sales_get_meeting_per_day(meeting_id):
+    current_user_id = int(get_jwt_identity())
+    user_role = get_jwt().get('role')
+
+    meeting = Meeting.query.get(meeting_id)
+    if not meeting:
+        return jsonify({"error": "Meeting not found"}), 404
+
+    if user_role != 'admin' and meeting.user_id != current_user_id:
+        return jsonify({"error": "Access denied"}), 403
+
+    client = Client.query.get(meeting.client_id)
+
+    return jsonify({
+        "id": meeting.id,
+        "client": client.company_name if client else "Unknown",
+        "contactPerson": client.contact_person if client else "N/A",
+        "meetingType": meeting.meeting_type,
+        "date": meeting.scheduled_date.isoformat(),
+        "time": meeting.scheduled_time.strftime('%H:%M'),
+        "location": meeting.location.get("label") if meeting.location else meeting.location,
+        "status": "Completed" if meeting.scheduled_date < datetime.now().date() else "Upcoming",
+        "duration": meeting.duration,
+        "notes": meeting.title,
+        "pastMeetings": []
+    }), 200
+
 
 @meetings_bp.route("/sales/<int:meeting_id>/update", methods=["PUT"])
 @sales_or_admin_required
