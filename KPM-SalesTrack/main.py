@@ -8,9 +8,8 @@ load_dotenv()
 
 
 app=create_app()
+
 CORS(app)
-
-
 @app.route("/")
 def home():
     return "Welcome KPM salesTrack"
