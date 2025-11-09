@@ -215,6 +215,7 @@ def updated_objective(objective_id):
     title = data.get('title')
     description = data.get('description')
     target_value = data.get('target_value')
+    current_value = data.get('current_value')
     start_date = data.get('start_date')
     end_date = data.get('end_date')
     user_id = data.get('user_id')
@@ -246,6 +247,9 @@ def updated_objective(objective_id):
     objective.end_date = parsed_end_date
     objective.user_id = user_id
     objective.created_by = created_by
+    
+    if current_value is not None:
+        objective.current_value = int(current_value)
 
     db.session.commit()
 
