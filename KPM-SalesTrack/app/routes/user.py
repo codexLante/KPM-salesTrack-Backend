@@ -156,13 +156,24 @@ def get_user(user_id):
     }), 200
 
 @users_bp.route("/GetAll", methods=["GET"])
-@admin_required  
+@admin_required
 def get_all_users():
-    users = User.query.all()
-    users_list = []
-    users = User.query.filter(User.role != 'admin').all()
-    for user in users:
-        users_list.append({
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        if page < 1:
+            return jsonify({"error": "Page must be >= 1"}), 400
+        if per_page < 1 or per_page > 100:
+            return jsonify({"error": "Per page must be between 1 and 100"}), 400
+
+        pagination = User.query.filter(User.role != 'admin').paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+
+        users_list = [{
             "id": user.id,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -171,9 +182,23 @@ def get_all_users():
             "role": user.role,
             "is_active": user.is_active,
             "created_at": user.created_at.isoformat() if user.created_at else None
-        })
-    
-    return jsonify(users_list), 200
+        } for user in pagination.items]
+
+        return jsonify({
+            "users": users_list,
+            "pagination": {
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+                "has_next": pagination.has_next,
+                "has_prev": pagination.has_prev
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve users: {str(e)}"}), 500
+
 
 @users_bp.route("/<int:user_id>/update", methods=["PUT"])
 @owner_or_admin_required 
