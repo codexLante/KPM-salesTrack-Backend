@@ -18,14 +18,11 @@ def create_client():
     phone_number = data.get("phone_number")
     email = data.get("email")
     address = data.get("address")
-    status = data.get("status")
-    assigned_to = data.get("assigned_to")
+    status = data.get("status", "active")
     
-    current_user_id = int(get_jwt_identity())
-    role = get_jwt().get("role")
 
-    if role != "admin" and assigned_to != current_user_id:
-        return jsonify({"error": "You can only assign clients to yourself"}), 403
+    current_user_id = int(get_jwt_identity())
+    assigned_to = current_user_id  
 
     if not company_name:
         return jsonify({"error": "Company name is required"}), 400
@@ -37,10 +34,6 @@ def create_client():
         return jsonify({"error": "Email is required"}), 400
     if not address:
         return jsonify({"error": "Address is required"}), 400
-    if not status:
-        return jsonify({"error": "Status is required"}), 400
-    if not assigned_to:
-        return jsonify({"error": "Assigned to is required"}), 400
 
     location = geocode_address(address)
     if not location:
@@ -54,7 +47,7 @@ def create_client():
         address=address,
         status=status,
         location=location,
-        assigned_to=assigned_to
+        assigned_to=assigned_to 
     )
 
     db.session.add(new_client)
